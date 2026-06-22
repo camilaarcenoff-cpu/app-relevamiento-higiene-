@@ -1,6 +1,7 @@
-// v2
+// v3
 import { createClient } from "@/lib/supabase/server";
-import { crearUsuario, actualizarUsuario, eliminarUsuario, subirFotoManzana } from "../actions";
+import { crearUsuario, actualizarUsuario, subirFotoManzana } from "../actions";
+import { EliminarButton } from "./EliminarButton";
 
 export default async function UsuariosPage() {
   const supabase = createClient();
@@ -135,20 +136,7 @@ export default async function UsuariosPage() {
                 </button>
 
                 {/* Eliminar usuario */}
-                <form action={eliminarUsuario}>
-                  <input type="hidden" name="id" value={u.id} />
-                  <button
-                    type="submit"
-                    className="text-red-400 text-sm hover:text-red-600 hover:underline"
-                    onClick={(e) => {
-                      if (!confirm(`¿Eliminar a ${u.nombre}? Esta acción no se puede deshacer.`)) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </form>
+                <EliminarButton id={u.id} nombre={u.nombre} />
               </div>
 
               {/* Fila inferior: manzanas con fotos */}
