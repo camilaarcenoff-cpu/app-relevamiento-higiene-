@@ -3,10 +3,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-// Todas estas funciones verifican que quien las ejecuta sea admin
-// (la tabla perfiles + RLS ya lo exige para las operaciones sobre tablas;
-// para las operaciones de Authentication usamos el cliente admin, así que
-// repetimos la verificación acá).
 async function verificarAdmin() {
   const supabase = createClient();
   const {
@@ -65,6 +61,54 @@ export async function actualizarUsuario(formData: FormData) {
   revalidatePath("/admin/usuarios");
 }
 
+export async function eliminarUsuario(formData: FormData) {
+  await verificarAdmin();
+  const admin = createAdminClient();
+
+  const id = String(formData.get("id"));
+  const { error } = await admin.auth.admin.deleteUser(id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/usuarios");
+}
+
+// ---------------------------------------------------------------------------
+// FOTOS DE MANZANAS (solo admin puede subir/actualizar)
+// ---------------------------------------------------------------------------
+export async function subirFotoManzana(formData: FormData) {
+  await verificarAdmin();
+  const admin = createAdminClient();
+
+  const manzana_id = String(formData.get("manzana_id") || "");
+  const file = formData.get("foto") as File | null;
+
+  if (!file || file.size === 0) return;
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${manzana_id}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error: uploadError } = await admin.storage
+    .from("fotos-manzanas")
+    .upload(path, buffer, { contentType: file.type, upsert: true });
+
+  if (uploadError) throw new Error(uploadError.message);
+
+  // Agregar cache-buster para que el navegador actualice la imagen
+  const { data: urlData } = admin.storage
+    .from("fotos-manzanas")
+    .getPublicUrl(path);
+
+  const fotoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+  const { error } = await admin
+    .from("manzanas")
+    .update({ foto_url: fotoUrl })
+    .eq("id", manzana_id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/usuarios");
+}
+
 // ---------------------------------------------------------------------------
 // ASIGNACIONES SEMANALES
 // ---------------------------------------------------------------------------
@@ -98,30 +142,8 @@ export async function eliminarAsignacion(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
-// ÍTEMS DE FORMULARIO (catálogo de valoraciones 1 a 5)
+// ÍTEMS DE FORMULARIO
 // ---------------------------------------------------------------------------
-const TIPOS_VALIDOS = [
-  "valoracion",
-  "si_no",
-  "texto",
-  "numero",
-  "opcion_unica",
-  "opcion_multiple",
-];
-
-// Convierte el texto de "opciones" (una por línea o separadas por coma) en un
-// array prolijo, sin vacíos ni espacios de más. Solo aplica a los tipos
-// opcion_unica / opcion_multiple.
-function parseOpciones(formData: FormData, tipo: string): string[] | null {
-  if (tipo !== "opcion_unica" && tipo !== "opcion_multiple") return null;
-  const crudo = String(formData.get("opciones") || "");
-  const opciones = crudo
-    .split(/[\n,]/)
-    .map((o) => o.trim())
-    .filter(Boolean);
-  return opciones.length > 0 ? opciones : null;
-}
-
 export async function crearItemFormulario(formData: FormData) {
   await verificarAdmin();
   const supabase = createClient();
@@ -129,33 +151,15 @@ export async function crearItemFormulario(formData: FormData) {
   const formulario = String(formData.get("formulario") || "");
   const etiqueta = String(formData.get("etiqueta") || "").trim();
   const orden = parseInt(String(formData.get("orden") || "0"), 10) || 0;
-  const tipo = String(formData.get("tipo") || "valoracion");
-  const obligatoria = formData.get("obligatoria") === "on";
-  const condicionItemId = String(formData.get("condicion_item_id") || "").trim() || null;
-  const condicionValor = String(formData.get("condicion_valor") || "").trim() || null;
 
   if (!["veedor", "vecino"].includes(formulario)) {
     throw new Error("Tipo de formulario inválido");
   }
   if (!etiqueta) throw new Error("La etiqueta es obligatoria.");
-  if (!TIPOS_VALIDOS.includes(tipo)) throw new Error("Tipo de pregunta inválido");
 
-  const opciones = parseOpciones(formData, tipo);
-  if ((tipo === "opcion_unica" || tipo === "opcion_multiple") && !opciones) {
-    throw new Error("Las preguntas de opción única/múltiple necesitan al menos una opción.");
-  }
-
-  const { error } = await supabase.from("items_formulario").insert({
-    formulario,
-    etiqueta,
-    orden,
-    activo: true,
-    tipo,
-    obligatoria,
-    condicion_item_id: condicionItemId,
-    condicion_valor: condicionItemId ? condicionValor : null,
-    opciones,
-  });
+  const { error } = await supabase
+    .from("items_formulario")
+    .insert({ formulario, etiqueta, orden, activo: true });
 
   if (error) throw new Error(error.message);
   revalidatePath("/admin/items");
@@ -169,31 +173,12 @@ export async function actualizarItemFormulario(formData: FormData) {
   const etiqueta = String(formData.get("etiqueta") || "").trim();
   const orden = parseInt(String(formData.get("orden") || "0"), 10) || 0;
   const activo = formData.get("activo") === "on";
-  const tipo = String(formData.get("tipo") || "valoracion");
-  const obligatoria = formData.get("obligatoria") === "on";
-  const condicionItemId = String(formData.get("condicion_item_id") || "").trim() || null;
-  const condicionValor = String(formData.get("condicion_valor") || "").trim() || null;
 
   if (!etiqueta) throw new Error("La etiqueta es obligatoria.");
-  if (!TIPOS_VALIDOS.includes(tipo)) throw new Error("Tipo de pregunta inválido");
-
-  const opciones = parseOpciones(formData, tipo);
-  if ((tipo === "opcion_unica" || tipo === "opcion_multiple") && !opciones) {
-    throw new Error("Las preguntas de opción única/múltiple necesitan al menos una opción.");
-  }
 
   const { error } = await supabase
     .from("items_formulario")
-    .update({
-      etiqueta,
-      orden,
-      activo,
-      tipo,
-      obligatoria,
-      condicion_item_id: condicionItemId,
-      condicion_valor: condicionItemId ? condicionValor : null,
-      opciones,
-    })
+    .update({ etiqueta, orden, activo })
     .eq("id", id);
 
   if (error) throw new Error(error.message);
