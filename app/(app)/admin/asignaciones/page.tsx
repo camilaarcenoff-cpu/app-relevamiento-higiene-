@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { crearAsignacion, eliminarAsignacion } from "../actions";
+import { ManzanaSearch } from "./ManzanaSearch";
 
 export default async function AsignacionesPage({
   searchParams,
@@ -64,14 +65,7 @@ export default async function AsignacionesPage({
               </option>
             ))}
           </select>
-          <select name="manzana_id" required className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-            <option value="">Manzana...</option>
-            {manzanas?.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.codigo} {m.barrio ? `· ${m.barrio}` : ""}
-              </option>
-            ))}
-          </select>
+          <ManzanaSearch manzanas={manzanas ?? []} />
           <button className="bg-navy text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 sm:col-span-2">
             Asignar
           </button>
