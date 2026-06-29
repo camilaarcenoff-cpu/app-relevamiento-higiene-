@@ -38,37 +38,31 @@ export default async function ItemsFormularioPage() {
     <div>
       <h1 className="text-2xl font-bold text-navy mb-1">Ítems de formulario</h1>
       <p className="text-gray-500 mb-6">
-        Estas son las preguntas que se muestran al cargar un relevamiento
-        desde la app. Podés editar el texto, el orden, el tipo de respuesta,
-        marcarlas como obligatorias, configurar lógica condicional, desactivar
-        las que no uses o agregar nuevas (incluyendo bloques de preguntas
-        libres que se pueden duplicar). Los cambios se ven al instante en los
-        formularios &quot;Relevamiento del Veedor&quot; y &quot;Percepción del vecino&quot;.
+        Preguntas que aparecen en los formularios de relevamiento. Editá y guardá fila por fila.
       </p>
 
       {(["veedor", "vecino"] as const).map((formulario) => (
-        <div key={formulario} className="mb-8">
+        <div key={formulario} className="mb-10">
           <h2 className="font-semibold text-navy mb-3">{TITULOS[formulario]}</h2>
 
-          {/* Alta de ítem */}
+          {/* Alta */}
           <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
-            <form action={crearItemFormulario} className="grid sm:grid-cols-12 gap-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Nueva pregunta</p>
+            <form action={crearItemFormulario} className="flex flex-wrap gap-2">
               <input type="hidden" name="formulario" value={formulario} />
               <input
                 name="etiqueta"
-                placeholder="Ej: Estado de los contenedores"
+                placeholder="Texto de la pregunta"
                 required
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-4"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm flex-1 min-w-48"
               />
               <select
                 name="tipo"
                 defaultValue="valoracion"
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-2"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
-                {Object.entries(TIPOS_PREGUNTA).map(([valor, etiqueta]) => (
-                  <option key={valor} value={valor}>
-                    {etiqueta}
-                  </option>
+                {Object.entries(TIPOS_PREGUNTA).map(([v, label]) => (
+                  <option key={v} value={v}>{label}</option>
                 ))}
               </select>
               <input
@@ -76,185 +70,153 @@ export default async function ItemsFormularioPage() {
                 type="number"
                 placeholder="Orden"
                 defaultValue={(grupos[formulario]?.length ?? 0) + 1}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-1"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-20"
               />
-              <select
-                name="condicion_item_id"
-                defaultValue=""
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-2"
-              >
-                <option value="">Sin condición (siempre visible)</option>
-                {grupos[formulario]?.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    Si &quot;{item.etiqueta}&quot;...
-                  </option>
-                ))}
-              </select>
-              <input
-                name="condicion_valor"
-                placeholder="= Si / No / valor"
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-1"
-              />
-              <label className="flex items-center gap-1 text-xs text-gray-600 sm:col-span-1">
+              <label className="flex items-center gap-1 text-xs text-gray-600 px-2">
                 <input type="checkbox" name="obligatoria" />
                 Obligatoria
               </label>
               <input
                 name="opciones"
-                placeholder="Opciones (solo para Opción única/múltiple): Bien, Regular, Mal"
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-span-11"
+                placeholder="Opciones: Bien, Regular, Mal (solo si aplica)"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
               />
-              <button className="bg-navy text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 sm:col-span-1">
+              <button className="bg-navy text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90">
                 Agregar
               </button>
             </form>
-            <p className="text-xs text-gray-400 mt-2">
-              Para condicionar una pregunta a otra: elegí de qué pregunta
-              depende y qué valor debe tener (&quot;Si&quot; o &quot;No&quot; para preguntas
-              Sí/No). La pregunta condicionada solo se muestra si se cumple
-              esa condición.
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Para preguntas de &quot;Opción única&quot; u &quot;Opción múltiple&quot;, completá
-              el campo &quot;Opciones&quot; con la lista de respuestas posibles,
-              separadas por coma o por renglón (ej: Bien, Regular, Mal).
-            </p>
           </div>
 
           {/* Listado */}
-          <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left text-gray-500">
-                <tr>
-                  <th className="px-4 py-2 w-16">Orden</th>
-                  <th className="px-4 py-2">Pregunta / ítem</th>
-                  <th className="px-4 py-2 w-32">Tipo</th>
-                  <th className="px-4 py-2 w-48">Opciones</th>
-                  <th className="px-4 py-2 w-44">Condición</th>
-                  <th className="px-4 py-2 w-20">Oblig.</th>
-                  <th className="px-4 py-2 w-20">Activo</th>
-                  <th className="px-4 py-2 w-24"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {grupos[formulario]?.map((item) => {
-                  const formId = `editar-item-${item.id}`;
-                  const otrosItems = grupos[formulario]?.filter((i) => i.id !== item.id) || [];
-                  return (
-                    <tr key={item.id} className="border-t border-gray-100 align-top">
-                      <td className="px-4 py-2">
-                        <form id={formId} action={actualizarItemFormulario} className="hidden" />
-                        <input type="hidden" name="id" value={item.id} form={formId} />
+          <div className="space-y-2">
+            {grupos[formulario]?.map((item) => {
+              const otrosItems = grupos[formulario]?.filter((i) => i.id !== item.id) || [];
+              return (
+                <div key={item.id} className="bg-white rounded-xl shadow-sm p-4">
+                  <form action={actualizarItemFormulario}>
+                    {/* Todos los inputs DENTRO del form — sin form association */}
+                    <input type="hidden" name="id" value={item.id} />
+
+                    <div className="flex flex-wrap gap-3 items-start">
+                      {/* Orden */}
+                      <div className="w-16">
+                        <label className="block text-xs text-gray-500 mb-1">Orden</label>
                         <input
                           name="orden"
                           type="number"
                           defaultValue={item.orden}
-                          form={formId}
-                          className="w-14 rounded border border-gray-300 px-2 py-1 text-sm"
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                         />
-                      </td>
-                      <td className="px-4 py-2">
+                      </div>
+
+                      {/* Etiqueta */}
+                      <div className="flex-1 min-w-48">
+                        <label className="block text-xs text-gray-500 mb-1">Pregunta</label>
                         <input
                           name="etiqueta"
                           defaultValue={item.etiqueta}
-                          form={formId}
-                          className="w-full rounded border border-transparent hover:border-gray-300 focus:border-turquesa px-2 py-1 text-sm"
+                          className="w-full rounded border border-gray-300 hover:border-gray-400 focus:border-turquesa px-2 py-1 text-sm"
                         />
-                      </td>
-                      <td className="px-4 py-2">
+                      </div>
+
+                      {/* Tipo */}
+                      <div className="w-40">
+                        <label className="block text-xs text-gray-500 mb-1">Tipo</label>
                         <select
                           name="tipo"
                           defaultValue={item.tipo}
-                          form={formId}
                           className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                         >
-                          {Object.entries(TIPOS_PREGUNTA).map(([valor, etiqueta]) => (
-                            <option key={valor} value={valor}>
-                              {etiqueta}
-                            </option>
+                          {Object.entries(TIPOS_PREGUNTA).map(([v, label]) => (
+                            <option key={v} value={v}>{label}</option>
                           ))}
                         </select>
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          name="opciones"
-                          defaultValue={(item as any).opciones?.join(", ") ?? ""}
-                          placeholder="Bien, Regular, Mal"
-                          form={formId}
-                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                      </td>
-                      <td className="px-4 py-2">
+                      </div>
+
+                      {/* Checkboxes */}
+                      <div className="flex flex-col gap-2 pt-5">
+                        <label className="flex items-center gap-1 text-xs text-gray-600">
+                          <input type="checkbox" name="obligatoria" defaultChecked={item.obligatoria} />
+                          Obligatoria
+                        </label>
+                        <label className="flex items-center gap-1 text-xs text-gray-600">
+                          <input type="checkbox" name="activo" defaultChecked={item.activo} />
+                          Activa
+                        </label>
+                      </div>
+
+                      {/* Guardar */}
+                      <div className="pt-5">
+                        <button
+                          type="submit"
+                          className="bg-turquesa/20 text-turquesa text-sm font-semibold rounded-lg px-3 py-1.5 hover:bg-turquesa/30"
+                        >
+                          Guardar
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Opciones (solo para opcion_unica/multiple) */}
+                    <div className="mt-2">
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Opciones (separadas por coma — solo para &quot;Opción única&quot; o &quot;Opción múltiple&quot;)
+                      </label>
+                      <input
+                        name="opciones"
+                        defaultValue={(item as any).opciones?.join(", ") ?? ""}
+                        placeholder="Bien, Regular, Mal"
+                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                      />
+                    </div>
+
+                    {/* Condición */}
+                    <div className="mt-2 flex gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-500 mb-1">Mostrar solo si...</label>
                         <select
                           name="condicion_item_id"
                           defaultValue={item.condicion_item_id ?? ""}
-                          form={formId}
-                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm mb-1"
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                         >
-                          <option value="">Sin condición</option>
+                          <option value="">Sin condición (siempre visible)</option>
                           {otrosItems.map((otro) => (
                             <option key={otro.id} value={otro.id}>
-                              Si &quot;{otro.etiqueta}&quot;...
+                              &quot;{otro.etiqueta}&quot; es igual a...
                             </option>
                           ))}
                         </select>
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-xs text-gray-500 mb-1">...este valor</label>
                         <input
                           name="condicion_valor"
                           defaultValue={item.condicion_valor ?? ""}
-                          placeholder="= Si / No / valor"
-                          form={formId}
+                          placeholder="Si / No / valor"
                           className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
                         />
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="checkbox"
-                          name="obligatoria"
-                          defaultChecked={item.obligatoria}
-                          form={formId}
-                        />
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="checkbox"
-                          name="activo"
-                          defaultChecked={item.activo}
-                          form={formId}
-                        />
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap">
-                        <button form={formId} className="text-turquesa text-sm font-semibold hover:underline mr-3">
-                          Guardar
-                        </button>
-                        <form action={eliminarItemFormulario} className="inline">
-                          <input type="hidden" name="id" value={item.id} />
-                          <button className="text-red-500 text-sm font-semibold hover:underline">
-                            Borrar
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {(!grupos[formulario] || grupos[formulario]!.length === 0) && (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-gray-400">
-                      Todavía no hay ítems cargados para este formulario.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </form>
+
+                  {/* Eliminar (form separado) */}
+                  <form action={eliminarItemFormulario} className="mt-2">
+                    <input type="hidden" name="id" value={item.id} />
+                    <button type="submit" className="text-red-400 text-xs hover:text-red-600 hover:underline">
+                      Eliminar
+                    </button>
+                  </form>
+                </div>
+              );
+            })}
+
+            {(!grupos[formulario] || grupos[formulario]!.length === 0) && (
+              <div className="bg-white rounded-xl shadow-sm px-4 py-8 text-center text-gray-400 text-sm">
+                Todavía no hay preguntas cargadas para este formulario.
+              </div>
+            )}
           </div>
         </div>
       ))}
-
-      <p className="text-xs text-gray-400 mt-1">
-        Para desactivar un ítem sin perder el historial de respuestas ya
-        cargadas, destildá &quot;Activo&quot; en vez de borrarlo. Para duplicar un
-        bloque de preguntas libres (tipo &quot;Texto libre&quot;), agregá un nuevo
-        ítem con el mismo tipo y un texto distinto.
-      </p>
     </div>
   );
 }
