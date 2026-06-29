@@ -95,7 +95,6 @@ export default function FotoInput({
         type="file"
         name={name}
         accept="image/*"
-        capture="environment"
         multiple
         onChange={manejarCambio}
         className="w-full text-sm"

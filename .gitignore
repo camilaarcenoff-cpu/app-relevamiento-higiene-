@@ -12,3 +12,4 @@
 # Sistema
 .DS_Store
 *.log
+.vercel

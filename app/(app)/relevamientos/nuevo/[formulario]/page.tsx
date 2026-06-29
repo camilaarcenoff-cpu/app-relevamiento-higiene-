@@ -21,7 +21,7 @@ export default async function NuevoRelevamientoPage({
   searchParams,
 }: {
   params: { formulario: string };
-  searchParams: { asignacion?: string };
+  searchParams: { asignacion?: string; error?: string };
 }) {
   const formulario = params.formulario;
   if (!TITULOS[formulario]) notFound();
@@ -82,6 +82,12 @@ export default async function NuevoRelevamientoPage({
         </span>{" "}
         · {(asignacion.manzana as any)?.barrio}
       </p>
+
+      {searchParams.error && (
+        <div className="mb-4 rounded-lg bg-red-50 text-red-700 text-sm px-4 py-3 border border-red-200">
+          ⚠️ {searchParams.error}
+        </div>
+      )}
 
       <form action={crearRelevamientoCampo} className="space-y-5 bg-white rounded-2xl shadow p-6">
         <input type="hidden" name="asignacion_id" value={asignacion.id} />
@@ -179,32 +185,17 @@ export default async function NuevoRelevamientoPage({
           </div>
         )}
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-navy mb-1">Tipo</label>
-            <select
-              name="tipo"
-              defaultValue="Primera visita"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="Primera visita">Primera visita</option>
-              <option value="Seguimiento">Seguimiento</option>
-              <option value="Recorrida">Recorrida</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-navy mb-1">Estado</label>
-            <select
-              name="resuelto"
-              defaultValue="Pendiente"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="Pendiente">Pendiente</option>
-              <option value="En proceso">En proceso</option>
-              <option value="Resuelto">Resuelto</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-semibold text-navy mb-1">Tipo</label>
+          <select
+            name="tipo"
+            defaultValue="Primera visita"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="Primera visita">Primera visita</option>
+            <option value="Seguimiento">Seguimiento</option>
+            <option value="Recorrida">Recorrida</option>
+          </select>
         </div>
 
         {formulario === "vecino" && (

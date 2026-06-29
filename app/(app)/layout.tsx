@@ -31,6 +31,8 @@ export default async function AppLayout({
   ];
 
   const adminItems = [
+    { href: "/admin/dashboard", label: "Dashboard" },
+    { href: "/admin/historico", label: "Datos históricos" },
     { href: "/admin/usuarios", label: "Usuarios" },
     { href: "/admin/asignaciones", label: "Asignaciones" },
     { href: "/admin/items", label: "Ítems de formulario" },
