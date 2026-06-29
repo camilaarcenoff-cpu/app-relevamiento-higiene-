@@ -8,7 +8,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 const SECRET = "fix-higiene-2026";
 
 export async function GET(request: Request) {
-  const auth = request.headers.get("x-fix-secret");
+  const { searchParams } = new URL(request.url);
+  const auth = searchParams.get("secret");
   if (auth !== SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
