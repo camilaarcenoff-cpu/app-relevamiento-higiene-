@@ -7,16 +7,15 @@ export default async function MiSemanaPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const hoy = new Date().toISOString().slice(0, 10);
-
+  // Semana más reciente (sin filtrar por fecha)
   const { data: semanaActual } = await supabase
     .from("semanas")
-    .select("id, numero, etiqueta, fecha_inicio, fecha_fin")
-    .lte("fecha_inicio", hoy)
-    .gte("fecha_fin", hoy)
+    .select("id, numero, etiqueta")
+    .order("numero", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  // Busca TODAS las manzanas asignadas al usuario esta semana (puede ser 2)
+  // Busca TODAS las manzanas asignadas al usuario en la semana más reciente
   let asignaciones: any[] = [];
   if (semanaActual) {
     const { data } = await supabase
